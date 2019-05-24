@@ -15,27 +15,62 @@
 package openssl
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
+	"hash"
 	"io"
 	"testing"
 )
 
-func TestSHA256(t *testing.T) {
+func testSHA2(t *testing.T, testFn func(data []byte)) {
 	for i := 0; i < 100; i++ {
 		buf := make([]byte, 10*1024-i)
 		if _, err := io.ReadFull(rand.Reader, buf); err != nil {
 			t.Fatal(err)
 		}
+		testFn(buf)
+	}
+}
 
-		expected := sha256.Sum256(buf)
-		got, err := SHA256(buf)
+func TestSHA56(t *testing.T) {
+	testSHA2(t, func(data []byte) {
+		expected := sha256.Sum256(data)
+		got, err := SHA256(data)
 		if err != nil {
 			t.Fatal(err)
 		}
-
 		if expected != got {
 			t.Fatalf("exp:%x got:%x", expected, got)
+		}
+	})
+}
+
+func testSHA2Writer(t *testing.T, opensslHash Hash, stdlibHash hash.Hash) {
+	for i := 0; i < 100; i++ {
+		if err := opensslHash.Reset(); err != nil {
+			t.Fatal(err)
+		}
+		stdlibHash.Reset()
+		buf := make([]byte, 10*1024-i)
+		if _, err := io.ReadFull(rand.Reader, buf); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := opensslHash.Write(buf); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := stdlibHash.Write(buf); err != nil {
+			t.Fatal(err)
+		}
+
+		got, err := opensslHash.Sum()
+		if err != nil {
+			t.Fatal(err)
+		}
+		exp := stdlibHash.Sum(nil)
+		if !bytes.Equal(got, exp) {
+			t.Fatalf("exp:%x got:%x", exp, got)
 		}
 	}
 }
@@ -45,40 +80,10 @@ func TestSHA256Writer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	hash := sha256.New()
-
-	for i := 0; i < 100; i++ {
-		if err := ohash.Reset(); err != nil {
-			t.Fatal(err)
-		}
-		hash.Reset()
-		buf := make([]byte, 10*1024-i)
-		if _, err := io.ReadFull(rand.Reader, buf); err != nil {
-			t.Fatal(err)
-		}
-
-		if _, err := ohash.Write(buf); err != nil {
-			t.Fatal(err)
-		}
-		if _, err := hash.Write(buf); err != nil {
-			t.Fatal(err)
-		}
-
-		var got, exp [32]byte
-
-		hash.Sum(exp[:0])
-		got, err := ohash.Sum()
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if got != exp {
-			t.Fatalf("exp:%x got:%x", exp, got)
-		}
-	}
+	testSHA2Writer(t, ohash, sha256.New())
 }
 
-func benchmarkSHA256(b *testing.B, length int64, fn shafunc) {
+func benchmarkSHA2(b *testing.B, length int64, fn shafunc) {
 	buf := make([]byte, length)
 	if _, err := io.ReadFull(rand.Reader, buf); err != nil {
 		b.Fatal(err)
@@ -91,17 +96,17 @@ func benchmarkSHA256(b *testing.B, length int64, fn shafunc) {
 }
 
 func BenchmarkSHA256Large_openssl(b *testing.B) {
-	benchmarkSHA256(b, 1024*1024, func(buf []byte) { SHA256(buf) })
+	benchmarkSHA2(b, 1024*1024, func(buf []byte) { SHA256(buf) })
 }
 
 func BenchmarkSHA256Large_stdlib(b *testing.B) {
-	benchmarkSHA256(b, 1024*1024, func(buf []byte) { sha256.Sum256(buf) })
+	benchmarkSHA2(b, 1024*1024, func(buf []byte) { sha256.Sum256(buf) })
 }
 
 func BenchmarkSHA256Small_openssl(b *testing.B) {
-	benchmarkSHA256(b, 1, func(buf []byte) { SHA256(buf) })
+	benchmarkSHA2(b, 1, func(buf []byte) { SHA256(buf) })
 }
 
 func BenchmarkSHA256Small_stdlib(b *testing.B) {
-	benchmarkSHA256(b, 1, func(buf []byte) { sha256.Sum256(buf) })
+	benchmarkSHA2(b, 1, func(buf []byte) { sha256.Sum256(buf) })
 }
