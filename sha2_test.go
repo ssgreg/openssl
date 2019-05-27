@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/sha512"
 	"hash"
 	"io"
 	"testing"
@@ -33,10 +34,49 @@ func testSHA2(t *testing.T, testFn func(data []byte)) {
 	}
 }
 
+func TestSHA224(t *testing.T) {
+	testSHA2(t, func(data []byte) {
+		expected := sha256.Sum224(data)
+		got, err := SHA224(data)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if expected != got {
+			t.Fatalf("exp:%x got:%x", expected, got)
+		}
+	})
+}
+
 func TestSHA56(t *testing.T) {
 	testSHA2(t, func(data []byte) {
 		expected := sha256.Sum256(data)
 		got, err := SHA256(data)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if expected != got {
+			t.Fatalf("exp:%x got:%x", expected, got)
+		}
+	})
+}
+
+func TestSHA384(t *testing.T) {
+	testSHA2(t, func(data []byte) {
+		expected := sha512.Sum384(data)
+		got, err := SHA384(data)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if expected != got {
+			t.Fatalf("exp:%x got:%x", expected, got)
+		}
+	})
+}
+
+func TestSHA512(t *testing.T) {
+	testSHA2(t, func(data []byte) {
+		expected := sha512.Sum512(data)
+		got, err := SHA512(data)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -75,12 +115,36 @@ func testSHA2Writer(t *testing.T, opensslHash Hash, stdlibHash hash.Hash) {
 	}
 }
 
+func TestSHA224Writer(t *testing.T) {
+	ohash, err := NewSHA224Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
+	testSHA2Writer(t, ohash, sha256.New224())
+}
+
 func TestSHA256Writer(t *testing.T) {
 	ohash, err := NewSHA256Hash()
 	if err != nil {
 		t.Fatal(err)
 	}
 	testSHA2Writer(t, ohash, sha256.New())
+}
+
+func TestSHA384Writer(t *testing.T) {
+	ohash, err := NewSHA384Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
+	testSHA2Writer(t, ohash, sha512.New384())
+}
+
+func TestSHA512Writer(t *testing.T) {
+	ohash, err := NewSHA512Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
+	testSHA2Writer(t, ohash, sha512.New())
 }
 
 func benchmarkSHA2(b *testing.B, length int64, fn shafunc) {
@@ -93,6 +157,22 @@ func benchmarkSHA2(b *testing.B, length int64, fn shafunc) {
 	for i := 0; i < b.N; i++ {
 		fn(buf)
 	}
+}
+
+func BenchmarkSHA224Large_openssl(b *testing.B) {
+	benchmarkSHA2(b, 1024*1024, func(buf []byte) { SHA224(buf) })
+}
+
+func BenchmarkSHA224Large_stdlib(b *testing.B) {
+	benchmarkSHA2(b, 1024*1024, func(buf []byte) { sha256.Sum224(buf) })
+}
+
+func BenchmarkSHA224Small_openssl(b *testing.B) {
+	benchmarkSHA2(b, 1, func(buf []byte) { SHA224(buf) })
+}
+
+func BenchmarkSHA224Small_stdlib(b *testing.B) {
+	benchmarkSHA2(b, 1, func(buf []byte) { sha256.Sum224(buf) })
 }
 
 func BenchmarkSHA256Large_openssl(b *testing.B) {
@@ -109,4 +189,36 @@ func BenchmarkSHA256Small_openssl(b *testing.B) {
 
 func BenchmarkSHA256Small_stdlib(b *testing.B) {
 	benchmarkSHA2(b, 1, func(buf []byte) { sha256.Sum256(buf) })
+}
+
+func BenchmarkSHA384Large_openssl(b *testing.B) {
+	benchmarkSHA2(b, 1024*1024, func(buf []byte) { SHA384(buf) })
+}
+
+func BenchmarkSHA384Large_stdlib(b *testing.B) {
+	benchmarkSHA2(b, 1024*1024, func(buf []byte) { sha512.Sum384(buf) })
+}
+
+func BenchmarkSHA384Small_openssl(b *testing.B) {
+	benchmarkSHA2(b, 1, func(buf []byte) { SHA384(buf) })
+}
+
+func BenchmarkSHA384Small_stdlib(b *testing.B) {
+	benchmarkSHA2(b, 1, func(buf []byte) { sha512.Sum384(buf) })
+}
+
+func BenchmarkSHA512Large_openssl(b *testing.B) {
+	benchmarkSHA2(b, 1024*1024, func(buf []byte) { SHA512(buf) })
+}
+
+func BenchmarkSHA512Large_stdlib(b *testing.B) {
+	benchmarkSHA2(b, 1024*1024, func(buf []byte) { sha512.Sum512(buf) })
+}
+
+func BenchmarkSHA512Small_openssl(b *testing.B) {
+	benchmarkSHA2(b, 1, func(buf []byte) { SHA512(buf) })
+}
+
+func BenchmarkSHA512Small_stdlib(b *testing.B) {
+	benchmarkSHA2(b, 1, func(buf []byte) { sha512.Sum512(buf) })
 }

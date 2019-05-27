@@ -18,9 +18,53 @@ package openssl
 import "C"
 
 const (
+	SHA224Size      = 28
+	SHA224BlockSize = 64
+
 	SHA256Size      = 32
 	SHA256BlockSize = 64
+
+	SHA384Size      = 48
+	SHA384BlockSize = 128
+
+	SHA512Size      = 64
+	SHA512BlockSize = 128
 )
+
+type SHA224Hash struct {
+	*internalHash
+}
+
+func NewSHA224Hash() (*SHA224Hash, error) {
+	return NewSHA224HashWithEngine(nil)
+}
+
+func NewSHA224HashWithEngine(e *Engine) (*SHA224Hash, error) {
+	h, err := newInternalHash(e, NID_sha224, SHA224Size, SHA224BlockSize)
+	if err != nil {
+		return nil, err
+	}
+	return &SHA224Hash{h}, nil
+}
+
+func SHA224(data []byte) (result [SHA224Size]byte, err error) {
+	hash, err := NewSHA224Hash()
+	if err != nil {
+		return result, err
+	}
+	defer hash.Close()
+
+	if _, err := hash.Write(data); err != nil {
+		return result, err
+	}
+	sum, err := hash.Sum()
+	if err != nil {
+		return result, err
+	}
+	copy(result[:], sum[:SHA224Size])
+
+	return
+}
 
 type SHA256Hash struct {
 	*internalHash
@@ -53,6 +97,76 @@ func SHA256(data []byte) (result [SHA256Size]byte, err error) {
 		return result, err
 	}
 	copy(result[:], sum[:SHA256Size])
+
+	return
+}
+
+type SHA384Hash struct {
+	*internalHash
+}
+
+func NewSHA384Hash() (*SHA384Hash, error) {
+	return NewSHA384HashWithEngine(nil)
+}
+
+func NewSHA384HashWithEngine(e *Engine) (*SHA384Hash, error) {
+	h, err := newInternalHash(e, NID_sha384, SHA384Size, SHA384BlockSize)
+	if err != nil {
+		return nil, err
+	}
+	return &SHA384Hash{h}, nil
+}
+
+func SHA384(data []byte) (result [SHA384Size]byte, err error) {
+	hash, err := NewSHA384Hash()
+	if err != nil {
+		return result, err
+	}
+	defer hash.Close()
+
+	if _, err := hash.Write(data); err != nil {
+		return result, err
+	}
+	sum, err := hash.Sum()
+	if err != nil {
+		return result, err
+	}
+	copy(result[:], sum[:SHA384Size])
+
+	return
+}
+
+type SHA512Hash struct {
+	*internalHash
+}
+
+func NewSHA512Hash() (*SHA512Hash, error) {
+	return NewSHA512HashWithEngine(nil)
+}
+
+func NewSHA512HashWithEngine(e *Engine) (*SHA512Hash, error) {
+	h, err := newInternalHash(e, NID_sha512, SHA512Size, SHA512BlockSize)
+	if err != nil {
+		return nil, err
+	}
+	return &SHA512Hash{h}, nil
+}
+
+func SHA512(data []byte) (result [SHA512Size]byte, err error) {
+	hash, err := NewSHA512Hash()
+	if err != nil {
+		return result, err
+	}
+	defer hash.Close()
+	if _, err := hash.Write(data); err != nil {
+		return result, err
+	}
+
+	sum, err := hash.Sum()
+	if err != nil {
+		return result, err
+	}
+	copy(result[:], sum[:SHA512Size])
 
 	return
 }
