@@ -33,6 +33,7 @@ type Method *C.EVP_MD
 var (
 	SHA1_Method   Method = C.X_EVP_sha1()
 	SHA256_Method Method = C.X_EVP_sha256()
+	SHA384_Method Method = C.X_EVP_sha384()
 	SHA512_Method Method = C.X_EVP_sha512()
 )
 
