@@ -204,6 +204,10 @@ func TestSign(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	_, err = key.SignPKCS1v15(SHA384_Method, data)
+	if err != nil {
+		t.Fatal(err)
+	}
 	_, err = key.SignPKCS1v15(SHA512_Method, data)
 	if err != nil {
 		t.Fatal(err)
@@ -238,6 +242,18 @@ func TestSignEC(t *testing.T) {
 			t.Fatal(err)
 		}
 		err = key.VerifyPKCS1v15(SHA256_Method, data, sig)
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("sha384", func(t *testing.T) {
+		t.Parallel()
+		sig, err := key.SignPKCS1v15(SHA384_Method, data)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = key.VerifyPKCS1v15(SHA384_Method, data, sig)
 		if err != nil {
 			t.Fatal(err)
 		}
