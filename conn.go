@@ -187,6 +187,13 @@ func Server(conn net.Conn, ctx *Ctx) (*Conn, error) {
 	return c, nil
 }
 
+func GetVerifyError(code VerifyResult) error {
+	if code == Ok {
+		return nil
+	}
+	return errors.New(C.GoString(C.X509_verify_cert_error_string(C.long(code))))
+}
+
 func (c *Conn) GetCtx() *Ctx { return c.ctx }
 
 func (c *Conn) CurrentCipher() (string, error) {
