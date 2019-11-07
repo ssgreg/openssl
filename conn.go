@@ -115,7 +115,7 @@ func (e VerifyError) Code() VerifyResult {
 }
 
 func (e VerifyError) Error() string {
-	return fmt.Sprintf("openssl verification error: %s", GetVerifyError(e.code))
+	return fmt.Sprintf("openssl verification error: %s", C.GoString(C.X509_verify_cert_error_string(C.long(e.code))))
 }
 
 func newSSL(ctx *C.SSL_CTX) (*C.SSL, error) {
@@ -204,13 +204,6 @@ func Server(conn net.Conn, ctx *Ctx) (*Conn, error) {
 	}
 	C.SSL_set_accept_state(c.ssl)
 	return c, nil
-}
-
-func GetVerifyError(code VerifyResult) error {
-	if code == Ok {
-		return nil
-	}
-	return errors.New(C.GoString(C.X509_verify_cert_error_string(C.long(code))))
 }
 
 func (c *Conn) GetCtx() *Ctx { return c.ctx }
