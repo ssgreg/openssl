@@ -99,6 +99,25 @@ const (
 	ApplicationVerification       VerifyResult = C.X509_V_ERR_APPLICATION_VERIFICATION
 )
 
+type VerifyError struct {
+	code VerifyResult
+}
+
+func NewVerifyError(code VerifyResult) error {
+	if code == Ok {
+		return nil
+	}
+	return &VerifyError{code: code}
+}
+
+func (e VerifyError) Code() VerifyResult {
+	return e.code
+}
+
+func (e VerifyError) Error() string {
+	return fmt.Sprintf("openssl verification error: %s", C.GoString(C.X509_verify_cert_error_string(C.long(e.code))))
+}
+
 func newSSL(ctx *C.SSL_CTX) (*C.SSL, error) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
