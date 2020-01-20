@@ -112,22 +112,17 @@ func NewCtx() (*Ctx, error) {
 	return c, err
 }
 
-// NewCtxFromFiles calls NewCtx, loads the provided files, and configures the
+// NewCtxFromKeys calls NewCtx, loads keys from provided data, and configures the
 // context to use them.
-func NewCtxFromFiles(cert_file string, key_file string) (*Ctx, error) {
+func NewCtxFromKeys(cert_bytes []byte, key_bytes []byte) (*Ctx, error) {
 	ctx, err := NewCtx()
-	if err != nil {
-		return nil, err
-	}
-
-	cert_bytes, err := ioutil.ReadFile(cert_file)
 	if err != nil {
 		return nil, err
 	}
 
 	certs := SplitPEM(cert_bytes)
 	if len(certs) == 0 {
-		return nil, fmt.Errorf("No PEM certificate found in '%s'", cert_file)
+		return nil, fmt.Errorf("No PEM certificate found")
 	}
 	first, certs := certs[0], certs[1:]
 	cert, err := LoadCertificateFromPEM(first)
@@ -151,11 +146,6 @@ func NewCtxFromFiles(cert_file string, key_file string) (*Ctx, error) {
 		}
 	}
 
-	key_bytes, err := ioutil.ReadFile(key_file)
-	if err != nil {
-		return nil, err
-	}
-
 	key, err := LoadPrivateKeyFromPEM(key_bytes)
 	if err != nil {
 		return nil, err
@@ -167,6 +157,22 @@ func NewCtxFromFiles(cert_file string, key_file string) (*Ctx, error) {
 	}
 
 	return ctx, nil
+}
+
+// NewCtxFromFiles calls NewCtx, loads the provided files, and configures the
+// context to use them.
+func NewCtxFromFiles(cert_file string, key_file string) (*Ctx, error) {
+	cert_bytes, err := ioutil.ReadFile(cert_file)
+	if err != nil {
+		return nil, err
+	}
+
+	key_bytes, err := ioutil.ReadFile(key_file)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewCtxFromKeys(cert_bytes, key_bytes)
 }
 
 // EllipticCurve repesents the ASN.1 OID of an elliptic curve.
