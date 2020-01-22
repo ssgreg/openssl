@@ -19,9 +19,9 @@ import (
 )
 
 var pemSplit *regexp.Regexp = regexp.MustCompile(`(?sm)` +
-	`(^-----[\s-]*?BEGIN.*?-----$` +
+	`(^-----[\s-]*?BEGIN.*?-----\r?$` +
 	`.*?` +
-	`^-----[\s-]*?END.*?-----$)`)
+	`^-----[\s-]*?END.*?-----\r?$)`)
 
 func SplitPEM(data []byte) [][]byte {
 	var results [][]byte
