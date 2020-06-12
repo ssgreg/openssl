@@ -537,6 +537,22 @@ int X_SSL_CTX_verify_cb(int ok, X509_STORE_CTX* store) {
 	return go_ssl_ctx_verify_cb_thunk(p, ok, store);
 }
 
+STACK_OF(X509_CRL)* X_STORE_lookup_crls_cb(X509_STORE_CTX *store, X509_NAME *nm) {
+	SSL* ssl = (SSL *)X509_STORE_CTX_get_ex_data(store,
+			SSL_get_ex_data_X509_STORE_CTX_idx());
+	SSL_CTX* ssl_ctx = SSL_get_SSL_CTX(ssl);
+	void* p = SSL_CTX_get_ex_data(ssl_ctx, get_ssl_ctx_idx());
+	// get the pointer to the go Ctx object and pass it back into the thunk
+	X509_CRL* crl = go_store_lookup_crls(p, store, nm);
+	if (!crl)
+		return NULL;
+	STACK_OF(X509_CRL) *crls = sk_X509_CRL_new_null();
+	if (!crls)
+        return NULL;
+	sk_X509_CRL_push(crls, crl);
+	return crls;
+}
+
 long X_SSL_CTX_set_tmp_dh(SSL_CTX* ctx, DH *dh) {
     return SSL_CTX_set_tmp_dh(ctx, dh);
 }
@@ -761,10 +777,78 @@ X509 *X_sk_X509_value(STACK_OF(X509)* sk, int i) {
    return sk_X509_value(sk, i);
 }
 
+int X_sk_DIST_POINT_num(CRL_DIST_POINTS *crldp) {
+	return sk_DIST_POINT_num(crldp);
+}
+
+DIST_POINT* X_sk_DIST_POINT_value(CRL_DIST_POINTS *crldp, int i) {
+	return sk_DIST_POINT_value(crldp, i);
+}
+
+GENERAL_NAMES *X_get_general_name(DIST_POINT* dp) {
+	if (!dp->distpoint || dp->distpoint->type != 0)
+		return NULL;
+	return dp->distpoint->name.fullname;
+}
+
+int X_sk_GENERAL_NAME_num(GENERAL_NAMES *gn) {
+	return sk_GENERAL_NAME_num(gn);
+}
+
+GENERAL_NAME *X_sk_GENERAL_NAME_value(GENERAL_NAMES *gens, int i) {
+	return sk_GENERAL_NAME_value(gens, i);
+}
+
+ASN1_STRING *X_GENERAL_NAME_get0_value(GENERAL_NAME *gen, int *gtype) {
+	return GENERAL_NAME_get0_value(gen, gtype);
+}
+
+int X_ASN1_STRING_length(ASN1_STRING *uri) {
+	return ASN1_STRING_length(uri);
+}
+
+unsigned char* X_ASN1_STRING_data(ASN1_STRING *x) {
+	return ASN1_STRING_data(x);
+}
+
+STACK_OF(X509_CRL) *X_sk_X509_CRL_new_null() {
+	return sk_X509_CRL_new_null();
+}
+
+void X_sk_X509_CRL_push(STACK_OF(X509_CRL)* crls, X509_CRL* crl) {
+	sk_X509_CRL_push(crls, crl);
+}
+
 long X_X509_get_version(const X509 *x) {
 	return X509_get_version(x);
 }
 
 int X_X509_set_version(X509 *x, long version) {
 	return X509_set_version(x, version);
+}
+
+ASN1_TIME *X_X509_CRL_get_nextUpdate(X509_CRL *crl) {
+	return X509_CRL_get_nextUpdate(crl);
+}
+
+X509* X_get_issuer(X509_STORE_CTX *ctx) {
+	X509 *issuer = NULL;
+	int cnum = ctx->error_depth;
+	int chnum = sk_X509_num(ctx->chain) - 1;
+
+	/* if we have an alternative CRL issuer cert use that */
+	if (ctx->current_issuer)
+		return ctx->current_issuer;
+	/*
+	* Else find CRL issuer: if not last certificate then issuer is next
+	* certificate in chain.
+	*/
+	if (cnum < chnum)
+		return sk_X509_value(ctx->chain, cnum + 1);
+
+	issuer = sk_X509_value(ctx->chain, chnum);
+	if (!ctx->check_issued(ctx, issuer, issuer))
+		return NULL;
+
+	return issuer;
 }

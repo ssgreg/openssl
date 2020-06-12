@@ -42,6 +42,7 @@ type Ctx struct {
 	chain     []*Certificate
 	key       PrivateKey
 	verify_cb VerifyCallback
+	lookup_cb LookupCrlsCallback
 	sni_cb    TLSExtServernameCallback
 
 	ticket_store_mu sync.Mutex
@@ -245,11 +246,17 @@ func (c *Ctx) UsePrivateKey(key PrivateKey) error {
 	return nil
 }
 
+// from openssl/x509_vfy.h
+const (
+	X509_V_FLAG_CRL_CHECK int = 0x4
+)
+
 type CertificateStore struct {
 	store *C.X509_STORE
 	// for GC
 	ctx   *Ctx
 	certs []*Certificate
+	crls  []*CRL
 }
 
 // Allocate a new, empty CertificateStore
@@ -301,6 +308,40 @@ func (s *CertificateStore) AddCertificate(cert *Certificate) error {
 		return errorFromErrorQueue()
 	}
 	return nil
+}
+
+// AddCertificateRevocationList adds certificate revocation list to
+// the CertificateStore
+func (s *CertificateStore) AddCertificateRevocationList(crl *CRL) error {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	s.crls = append(s.crls, crl)
+	if int(C.X509_STORE_add_crl(s.store, crl.x)) != 1 {
+		return errorFromErrorQueue()
+	}
+	return nil
+}
+
+func (s *CertificateStore) SetFlags(flags int) error {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	if int(C.X509_STORE_set_flags(s.store, C.ulong(flags))) != 1 {
+		return errorFromErrorQueue()
+	}
+	return nil
+}
+
+// SetupLookupCrlsCb set the function to look up all the CRLs 
+// that match the given name
+func (s *CertificateStore) SetupLookupCrlsCb(lookup_cb LookupCrlsCallback) {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	s.ctx.lookup_cb = lookup_cb
+	if lookup_cb != nil {
+		C.X509_STORE_set_lookup_crls_cb(s.store, (*[0]byte)(C.X_STORE_lookup_crls_cb))
+	} else {
+		C.X509_STORE_set_lookup_crls_cb(s.store, nil)
+	}
 }
 
 type CertificateStoreCtx struct {
@@ -449,6 +490,30 @@ func go_ssl_ctx_verify_cb_thunk(p unsafe.Pointer, ok C.int, ctx *C.X509_STORE_CT
 		}
 	}
 	return ok
+}
+
+type LookupCrlsCallback func(store *CertificateStoreCtx, name Name) *CRL
+
+//export go_store_lookup_crls
+func go_store_lookup_crls(p unsafe.Pointer, ctx *C.X509_STORE_CTX, nm *C.X509_NAME) *C.X509_CRL {
+	defer func() {
+		if err := recover(); err != nil {
+			logger.Critf("openssl: lookup crls panic'd: %v", err)
+			os.Exit(1)
+		}
+	}()
+	lookup_cb := (*Ctx)(p).lookup_cb
+	// set up defaults just in case lookup_cb is nil
+	if lookup_cb != nil {
+		store := &CertificateStoreCtx{ctx: ctx}
+		name := Name{name: nm}
+		crl := lookup_cb(store, name)
+		if crl == nil {
+			return nil
+		}
+		return crl.x
+	}
+	return nil
 }
 
 // SetVerify controls peer verification settings. See
