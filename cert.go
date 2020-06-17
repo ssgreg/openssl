@@ -44,6 +44,18 @@ const (
 	EVP_SHA512    EVP_MD = iota
 )
 
+const (
+	GEN_OTHERNAME = 0
+	GEN_EMAIL     = 1
+	GEN_DNS       = 2
+	GEN_X400      = 3
+	GEN_DIRNAME   = 4
+	GEN_EDIPARTY  = 5
+	GEN_URI       = 6
+	GEN_IPADD     = 7
+	GEN_RID       = 8
+)
+
 // X509_Version represents a version on an x509 certificate.
 type X509_Version int
 
@@ -433,4 +445,54 @@ func (c *Certificate) SetVersion(version X509_Version) error {
 		return errors.New("failed to set certificate version")
 	}
 	return nil
+}
+
+func (c *Certificate) GetAlternativeNames() []string {
+	var san_names *C.GENERAL_NAMES
+	san_names = (*C.GENERAL_NAMES)(C.X509_get_ext_d2i(c.x, C.int(NID_subject_alt_name), nil, nil))
+	if san_names == nil {
+		return nil
+	}
+	urls := make([]string, 0)
+
+	for i := 0; i != int(C.X_sk_GENERAL_NAME_num(san_names)); i++ {
+		current_name := C.X_sk_GENERAL_NAME_value(san_names, C.int(i))
+		var gtype C.int
+		uri := C.X_GENERAL_NAME_get0_value(current_name, &gtype)
+		length := C.X_ASN1_STRING_length(uri)
+		if int(gtype) == GEN_DNS {
+			uptr := (*C.char)(unsafe.Pointer(C.X_ASN1_STRING_data(uri)))
+			path := C.GoStringN(uptr, length)
+			urls = append(urls, path)
+		}
+	}
+	return urls
+}
+
+func (c *Certificate) GetDistributionPoints() []string {
+	var crldp *C.CRL_DIST_POINTS
+	crldp = (*C.CRL_DIST_POINTS)(C.X509_get_ext_d2i(c.x, C.int(NID_crl_distribution_points), nil, nil))
+	if crldp == nil {
+		return nil
+	}
+	urls := make([]string, 0)
+	for i := 0; i != int(C.X_sk_DIST_POINT_num(crldp)); i++ {
+		dp := C.X_sk_DIST_POINT_value(crldp, C.int(i))
+		gens := C.X_get_general_name(dp)
+		for j := 0; j != int(C.X_sk_GENERAL_NAME_num(gens)); j++ {
+			gen := C.X_sk_GENERAL_NAME_value(gens, C.int(j))
+			if gen == nil {
+				continue
+			}
+			var gtype C.int
+			uri := C.X_GENERAL_NAME_get0_value(gen, &gtype)
+			length := C.X_ASN1_STRING_length(uri)
+			if int(gtype) == GEN_URI && length > 6 {
+				uptr := (*C.char)(unsafe.Pointer(C.X_ASN1_STRING_data(uri)))
+				path := C.GoStringN(uptr, length)
+				urls = append(urls, path)
+			}
+		}
+	}
+	return urls
 }

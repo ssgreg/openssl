@@ -167,6 +167,23 @@ extern int X_sk_X509_num(STACK_OF(X509) *sk);
 extern X509 *X_sk_X509_value(STACK_OF(X509)* sk, int i);
 extern long X_X509_get_version(const X509 *x);
 extern int X_X509_set_version(X509 *x, long version);
+extern STACK_OF(X509_CRL) *X_sk_X509_CRL_new_null();
+extern void X_sk_X509_CRL_push(STACK_OF(X509_CRL)* crls, X509_CRL* crl);
+extern ASN1_TIME *X_X509_CRL_get_nextUpdate(X509_CRL *crl);
+extern X509* X_get_issuer(X509_STORE_CTX *ctx);
+
+/* misc methods */
+extern int X_sk_DIST_POINT_num(STACK_OF(DIST_POINT) *crldp);
+extern DIST_POINT* X_sk_DIST_POINT_value(STACK_OF(DIST_POINT) *crldp, int i);
+extern GENERAL_NAMES *X_get_general_name(DIST_POINT* dp);
+extern int X_sk_GENERAL_NAME_num(GENERAL_NAMES *gn);
+extern GENERAL_NAME *X_sk_GENERAL_NAME_value(GENERAL_NAMES *gens, int i);
+extern ASN1_STRING *X_GENERAL_NAME_get0_value(GENERAL_NAME *gen, int *gtype);
+extern int X_ASN1_STRING_length(ASN1_STRING *uri);
+extern unsigned char* X_ASN1_STRING_data(ASN1_STRING *x);
 
 /* PEM methods */
 extern int X_PEM_write_bio_PrivateKey_traditional(BIO *bio, EVP_PKEY *key, const EVP_CIPHER *enc, unsigned char *kstr, int klen, pem_password_cb *cb, void *u);
+
+/* Store methods */
+extern STACK_OF(X509_CRL)* X_STORE_lookup_crls_cb(X509_STORE_CTX *store, X509_NAME *nm);
