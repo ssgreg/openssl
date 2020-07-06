@@ -523,6 +523,14 @@ long X_SSL_CTX_set_tmp_ecdh(SSL_CTX* ctx, EC_KEY *key) {
 	return SSL_CTX_set_tmp_ecdh(ctx, key);
 }
 
+int X_SSL_CTX_set_verify_param_flags(SSL_CTX* ctx, unsigned long flags)
+{
+	X509_VERIFY_PARAM* param = X509_VERIFY_PARAM_new();
+	X509_VERIFY_PARAM_set_flags(param, flags);
+	SSL_CTX_set1_param(ctx, param);
+	X509_VERIFY_PARAM_free(param);
+}
+
 long X_SSL_CTX_set_tlsext_servername_callback(
 		SSL_CTX* ctx, int (*cb)(SSL *con, int *ad, void *args)) {
 	return SSL_CTX_set_tlsext_servername_callback(ctx, cb);
@@ -767,6 +775,30 @@ int X_HMAC_Update(HMAC_CTX *ctx, const unsigned char *data, size_t len) {
 
 int X_HMAC_Final(HMAC_CTX *ctx, unsigned char *md, unsigned int *len) {
 	return HMAC_Final(ctx, md, len);
+}
+
+X509_VERIFY_PARAM* X_X509_VERIFY_PARAM_new() {
+	return X509_VERIFY_PARAM_new();
+}
+
+void X_X509_VERIFY_PARAM_free(X509_VERIFY_PARAM *param) {
+	X509_VERIFY_PARAM_free(param);
+}
+
+int X_X509_VERIFY_PARAM_set_flags(X509_VERIFY_PARAM *param, unsigned long flags) {
+	return X509_VERIFY_PARAM_set_flags(param, flags);
+}
+
+int X_X509_VERIFY_PARAM_clear_flags(X509_VERIFY_PARAM *param, unsigned long flags) {
+	return X509_VERIFY_PARAM_clear_flags(param, flags);
+}
+
+unsigned long X_X509_VERIFY_PARAM_get_flags(X509_VERIFY_PARAM *param) {
+	return X509_VERIFY_PARAM_get_flags(param);
+}
+
+int X_SSL_CTX_set1_param(SSL_CTX *ctx, X509_VERIFY_PARAM *vpm) {
+	return SSL_CTX_set1_param(ctx, vpm);
 }
 
 int X_sk_X509_num(STACK_OF(X509) *sk) {

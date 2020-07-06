@@ -331,7 +331,7 @@ func (s *CertificateStore) SetFlags(flags int) error {
 	return nil
 }
 
-// SetupLookupCrlsCb set the function to look up all the CRLs 
+// SetupLookupCrlsCb set the function to look up all the CRLs
 // that match the given name
 func (s *CertificateStore) SetupLookupCrlsCb(lookup_cb LookupCrlsCallback) {
 	runtime.LockOSThread()
@@ -638,4 +638,39 @@ func (c *Ctx) SessSetCacheSize(t int) int {
 // https://www.openssl.org/docs/ssl/SSL_CTX_sess_set_cache_size.html
 func (c *Ctx) SessGetCacheSize() int {
 	return int(C.X_SSL_CTX_sess_get_cache_size(c.ctx))
+}
+
+type VerificationFlags int
+
+const (
+	CrlCheck           VerificationFlags = C.X509_V_FLAG_CRL_CHECK
+	CrlCheckAll        VerificationFlags = C.X509_V_FLAG_CRL_CHECK_ALL
+	IgnoreCritical     VerificationFlags = C.X509_V_FLAG_IGNORE_CRITICAL
+	X509Strict         VerificationFlags = C.X509_V_FLAG_X509_STRICT
+	AllowProxyCerts    VerificationFlags = C.X509_V_FLAG_ALLOW_PROXY_CERTS
+	PolicyCheck        VerificationFlags = C.X509_V_FLAG_POLICY_CHECK
+	ExplicitPolicy     VerificationFlags = C.X509_V_FLAG_EXPLICIT_POLICY
+	InhibitAny         VerificationFlags = C.X509_V_FLAG_INHIBIT_ANY
+	InhibitMap         VerificationFlags = C.X509_V_FLAG_INHIBIT_MAP
+	NotifyPolicy       VerificationFlags = C.X509_V_FLAG_NOTIFY_POLICY
+	ExtendedCrlSupport VerificationFlags = C.X509_V_FLAG_EXTENDED_CRL_SUPPORT
+	UseDeltas          VerificationFlags = C.X509_V_FLAG_USE_DELTAS
+	CheckSsSignature   VerificationFlags = C.X509_V_FLAG_CHECK_SS_SIGNATURE
+	TrustedFirst       VerificationFlags = C.X509_V_FLAG_TRUSTED_FIRST
+	NoAltChains        VerificationFlags = C.X509_V_FLAG_NO_ALT_CHAINS
+	PartialChain       VerificationFlags = C.X509_V_FLAG_PARTIAL_CHAIN
+)
+
+// SetX509VerifyParams sets certificate verification flags. See
+// https://www.openssl.org/docs/man1.0.2/man3/X509_VERIFY_PARAM_set_time.html
+func (c *Ctx) SetX509VerifyParams(options VerificationFlags) error {
+	params := C.X_X509_VERIFY_PARAM_new()
+	if params == nil {
+		return errors.New("failed to allocate X509_VERIFY_PARAM")
+	}
+
+	C.X_X509_VERIFY_PARAM_set_flags(params, C.ulong(options))
+	C.X_SSL_CTX_set1_param(c.ctx, params)
+	C.X_X509_VERIFY_PARAM_free(params)
+	return nil
 }
