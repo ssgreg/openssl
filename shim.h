@@ -81,6 +81,14 @@ extern long X_SSL_CTX_set_tmp_ecdh(SSL_CTX* ctx, EC_KEY *key);
 extern long X_SSL_CTX_set_tlsext_servername_callback(SSL_CTX* ctx, int (*cb)(SSL *con, int *ad, void *args));
 extern int X_SSL_CTX_verify_cb(int ok, X509_STORE_CTX* store);
 extern long X_SSL_CTX_set_tmp_dh(SSL_CTX* ctx, DH *dh);
+
+extern X509_VERIFY_PARAM* X_X509_VERIFY_PARAM_new();
+extern void X_X509_VERIFY_PARAM_free(X509_VERIFY_PARAM *param);
+extern int X_X509_VERIFY_PARAM_set_flags(X509_VERIFY_PARAM *param, unsigned long flags);
+extern int X_X509_VERIFY_PARAM_clear_flags(X509_VERIFY_PARAM *param, unsigned long flags);
+extern unsigned long X_X509_VERIFY_PARAM_get_flags(X509_VERIFY_PARAM *param);
+extern int X_SSL_CTX_set1_param(SSL_CTX *ctx, X509_VERIFY_PARAM *vpm);
+
 extern long X_PEM_read_DHparams(SSL_CTX* ctx, DH *dh);
 extern int X_SSL_CTX_set_tlsext_ticket_key_cb(SSL_CTX *sslctx,
         int (*cb)(SSL *s, unsigned char key_name[16],
