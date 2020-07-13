@@ -82,6 +82,11 @@ type CertificateInfo struct {
 	CommonName   string
 }
 
+type BasicConstraints struct {
+	CA      bool
+	PathLen int
+}
+
 type Name struct {
 	name *C.X509_NAME
 }
@@ -467,6 +472,21 @@ func (c *Certificate) GetAlternativeNames() []string {
 		}
 	}
 	return urls
+}
+
+func (c *Certificate) GetBasicConstraints() *BasicConstraints {
+	var bs *C.BASIC_CONSTRAINTS
+	bs = (*C.BASIC_CONSTRAINTS)(C.X509_get_ext_d2i(c.x, C.int(NID_basic_constraints), nil, nil))
+	if bs == nil {
+		return nil
+	}
+
+	var result BasicConstraints
+	result.CA = C.int(bs.ca) != 0
+	result.PathLen = int(C.ASN1_INTEGER_get(bs.pathlen))
+
+	C.BASIC_CONSTRAINTS_free(bs)
+	return &result
 }
 
 func (c *Certificate) GetDistributionPoints() []string {
